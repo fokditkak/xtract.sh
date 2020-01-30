@@ -4,9 +4,11 @@ This is a work in progress training Bash script (CLI) which aims to facilitate a
 ## About
 This is a side-project which I use to learn Bash scripting and actually make my life easier when it comes to archive extraction.
 It relies heavily on pre-installed programs such as:
+
 * **tar**
 * **unrar**
 * **unzip** and some others...
+
 Creates log files with details of the extraction process, timestamp and general info.
 ## Installation
 Clone this repo `git clone https://github.com/fokditkak/xtract.git` in desired directory then `cd THE_DIR`.

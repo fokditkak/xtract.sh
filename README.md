@@ -9,6 +9,8 @@ It relies heavily on pre-installed programs such as:
 * **unrar**
 * **unzip** and some others...
 
+*****NOTICE:** Currently the script supports only zip and rar.
+
 Creates log files with details of the extraction process, timestamp and general info.
 ## Installation
 Clone this repo `git clone https://github.com/fokditkak/xtract.git` in desired directory then `cd THE_DIR`.

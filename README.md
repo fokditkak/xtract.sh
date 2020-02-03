@@ -8,7 +8,7 @@ Programs the script depends on and supports:
 * **tar**
 * **unrar**
 * **unzip**
-* 7z
+* **7z**
 
 Also creates log files with details of the extraction process and general info.
 ## Installation

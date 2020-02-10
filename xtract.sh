@@ -16,7 +16,7 @@ LOG_DIR=$HOME/logs # Log file not in /var/logs due to permission issues
 LOG_FILE=$LOG_DIR/$(basename "$0".log)
 ROOT_UID=0
 #ARGS_COUNT=2 # unused yet TODO
-#A_NAME=$(basename "$1" | sed -r '$s/\.(zip|rar|bz2|gz|tar.gz|tar.bz2)$//I' | sed -r '$s/ //g') # Strip archive extension
+A_NAME=$(basename "$1" | sed -r '$s/\.(zip|rar|bz2|gz|tar.gz|tar.bz2)$//I' | sed -r '$s/ //g') # Strip archive extension
 
 trap 'logger "~~~~~~~~~~~~~~ xtract.sh stopped ~~~~~~~~~~~~~"' 1 0
 
@@ -41,7 +41,7 @@ spin () { # Makeshift progress indicator
     printf -- "\b\033[32mDone\033[0m"
     echo
     sleep 0.05
-    return 0 ### TESTING PURPOSES
+#    return 0 ### TESTING PURPOSES - to check if it is necessairy
 }
 
 checker () {
@@ -113,6 +113,8 @@ init () {
         exit 1; fi # Exit if root
 
     xtract "$1"
+    logger "Archive size: $(du -sh "$1" | awk '{print $1}')"
+    logger "Extracted size: $(du -sh "$A_NAME" | awk '{print $1}')" # if du returns error log it
     echo "Log file - ${LOG_FILE}"
 }
 

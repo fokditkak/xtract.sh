@@ -20,8 +20,8 @@ ROOT_UID=0
 
 trap 'logger "~~~~~~~~~~~~~~ xtract.sh stopped ~~~~~~~~~~~~~"' 1 0
 
-logger () {
-    echo -e "$@" #SC2086
+logger () { # This is just output redirection for the log file
+    echo -e "$@" #SC2u086
     echo -e "$(date +\|%T.\[%4N\]\|) $*" > /dev/null >> "${LOG_FILE}" 2>&1
 }
 
@@ -30,9 +30,8 @@ spin () { # Makeshift progress indicator
 # e.g. extracting, converting, etc.
     i=1
     pid=$!  # get the PID of the external utility. Maybe a better way of doing this...
-#             SC2181: Check exit code directly with e.g. 'if mycmd;', not indirectly with $?.
-#   sp='%^s&-!@#$*a()_+~' # TODO: Figure out how to randomize chars.
-    sp='/-\|'               # <`~~~ these are the actual spinner chars.
+#             SC2181: Check exit code directly with e.g. 'if mycmd;', not $!
+    sp='/-\|'  # <`~~~ these are the actual spinner chars.
     n=${#sp}
     while [[ -d /proc/$pid ]]; do   # PID directory probing
         echo -ne "\b${sp:i++%n:1}"  # Print a character then delete it inplace
@@ -41,10 +40,10 @@ spin () { # Makeshift progress indicator
     printf -- "\b\033[32mDone\033[0m"
     echo
     sleep 0.05
-    return 0 ### TESTING PURPOSES
+    return 0
 }
 
-checker () {
+checker () { # checks if nedded program is installed
     echo "Checking installed programs"
     if command -v "$*" > /dev/null 2>&1; then
         logger "Found $*"
@@ -54,13 +53,13 @@ checker () {
     fi
 }
 
-xtract () {
+xtract () { # main script
     case "$1" in
         *.zip )
             checker unzip
             logger "Archive info:\n$(unzip -Z -z -h -t "$1")" > /dev/null 2>&1
             logger "Checking archive integrity"
-            if logger "$(unzip -t -q "$1")" > /dev/null 2>&1 &
+            if logger "$(unzip -t -q "$1")" > /dev/null 2>&1 & # this syntax logs and executes a command... probably a better way of doing it
             then spin; fi
 
             logger "Starting extraction"
@@ -101,14 +100,14 @@ xtract () {
     logger "Files from '$1' extracted successfuly"
 }
 
-init () {
+init () { # initialization - basic checks and main script invoker
 
     echo >> "${LOG_FILE}"
     logger "~~~~~~~~~~~~~~ xtract.sh xecuted ~~~~~~~~~~~~~"
     if [[ -z $1 ]]; then # If no args are given display basic usage details and exit
         echo "Usage: $(basename "$0" .sh) [path-to-archive] (This will extract the file in your current directory!)"
-        exit 1
-    elif [[ $UID -eq $ROOT_UID ]]; then # Am I root?
+        exit 1 # Exit if no args given
+    elif [[ $UID -eq $ROOT_UID ]]; then # second check - Am I root?
         echo "This script shouldn't be run as root"
         exit 1; fi # Exit if root
 

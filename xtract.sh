@@ -28,10 +28,13 @@
 LOG_DIR=$HOME/logs # Log file not in /var/logs due to permission issues
 LOG_FILE=$LOG_DIR/$(basename "$0".log)
 ROOT_UID=0
-#ARGS_COUNT=2 # unused yet TODO
+DESTINATION=""
+ARGS=("$@")
 #A_NAME=$(basename "$1" | sed -r '$s/\.(zip|rar|bz2|gz|tar.gz|tar.bz2)$//I' | sed -r '$s/ //g') # Strip archive extension
+#TODO"Usage: $(basename "$0" .sh)"
 
 trap 'logger "~~~~~~~~~~~~~~ xtract.sh stopped ~~~~~~~~~~~~~"' 1 0
+
 
 spin () {   # Makeshift progress indicator
             # It should be used after longer processess
@@ -41,28 +44,18 @@ spin () {   # Makeshift progress indicator
 #             SC2181: Check exit code directly with e.g. 'if mycmd;', not $!
     sp='/-\|'  # <`~~~ these are the actual spinner chars.
     n=${#sp}
+    echo -ne "\b\b"
     while [[ -d /proc/$pid ]]; do   # PID directory probing
         echo -ne "\b${sp:i++%n:1}"  # Print a character then delete it inplace
         sleep 0.08
-    done
-    printf -- "\b\033[32mDone\033[0m"
-    echo
-    sleep 0.05
+    done; printf -- "\b\033[32mDone\033[0m"; echo; sleep 0.05
 }
-
-
 
 #----------------------------------------------------------------------
 #  Pre-extraction checks
 #----------------------------------------------------------------------
-
-if [[ -z $1 ]]; then # If no args are given display basic usage details and exit
-    echo "Usage: $(basename "$0" .sh) [path-to-archive] \
-    (This will extract the file in your current directory!)"
-    exit 1                                                          # Exit if no args given
-elif [[ $UID -eq $ROOT_UID ]]; then # second check - Am I root?
-    echo "This script shouldn't be run as root"
-    exit 1; fi                                                      # Exit if root
+[[ $# -eq 0 ]] && echo "no args given"; exit 1
+[[ $UID -eq $ROOT_UID ]] && echo "This script shouldn't be run as root"; exit 1
 
 
 chk_p () { # checks if nedded program is installed
@@ -72,10 +65,8 @@ chk_p () { # checks if nedded program is installed
 chk_archive () {
     logger "Checking archive ${1} with 7z utility"
     chk_p 7z
-    if logger "7z output:\n$(7z t "$*" | sed -n 5,18p)" > /dev/null 2>&1 &
-    then spin
-    else
-        echo "error with archive integrity"; exit 1; fi
+    logger "7z output:\n$(7z t "$*" | sed -n 5,18p)" > /dev/null 2>&1 & spin
+    #    || echo "error with archive integrity" && exit 1
 }
 
 logger () { # This is just output redirection for the log file
@@ -83,41 +74,37 @@ logger () { # This is just output redirection for the log file
     echo -e "$(date +\|%T.\[%4N\]\|) $*" > /dev/null >> "${LOG_FILE}" 2>&1 # adds time and the regular output to the logfile
 }
 
-
-
 #----------------------------------------------------------------------
-#  External utiliry extraction commands
+#  External utility extraction commands
 #----------------------------------------------------------------------
 
 x_zip () {
     chk_p unzip
     chk_archive "$1"
-    if logger "...$(unzip -o -q "$1")" > /dev/null 2>&1 &
-    then spin; fi;
+    logger "Starting xtraction"
+    logger "...$(unzip -o -q "$1" -d "$DESTINATION")" \
+        > /dev/null 2>&1 & spin || logger "...$(unzip -o -q "$1")" > /dev/null 2>&1 & spin
 }
 
 x_rar () {
     chk_p unrar
     check_archive "$1"
-    if logger "$(unrar x -y -o+ -idpdc "$1")" > /dev/null 2>&1 &
-    then spin; fi
+    logger "Starting xtraction"
+    logger "$(unrar x -y -o+ -idpdc "$1")" > /dev/null 2>&1 & spin
 }
 
 x_tar () {
     chk_p tar
     chk_archive "$1"
-    if logger "...$(tar xaf "$1")" > /dev/null 2>&1 &
-    then spin; fi
+    logger "Starting xtraction with tar"
+    logger "...$(tar xaf "$1")" > /dev/null 2>&1 & spin
 }
 
 x_7z () {
-    chkr 7z
+    chk_p 7z
     chk_archive "$1"
-    if logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" > /dev/null 2>&1 &
-    then spin; fi
+    logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" > /dev/null 2>&1 & spin
 }
-
-
 
 #----------------------------------------------------------------------
 # The actual running part of the script
@@ -125,15 +112,15 @@ x_7z () {
 
 xtract () {       # match files by extension
     case "$1" in
-        *.zip )
+        *.zip)
             x_zip "$1"
             ;;
 
-        *.rar ) # Logging is too bloated
+        *.rar) # Logging is too bloated
             x_rar "$1"
             ;;
 
-        *.tar | *.tar.* )
+        *.tar | *.tar.*)
             x_tar "$1"
             ;;
 
@@ -141,7 +128,7 @@ xtract () {       # match files by extension
             x_7z "$1"
             ;;
 
-        * )
+        *)
             echo "Unsupported file format"; exit 1
             ;;
     esac
@@ -150,7 +137,22 @@ xtract () {       # match files by extension
 init () { # initialization - basic checks and main script invoker
     echo >> "${LOG_FILE}"
     logger "~~~~~~~~~~~~~~ xtract.sh xecuted ~~~~~~~~~~~~~"
-    if xtract "$1"; then logger "Files from '$1' extracted successfuly"; else "Errors occured"; fi
+    for i in "${ARGS[@]}"; do
+        case "$i" in
+            -t=* | --target=*)
+                shift
+                [ -d "${i#*=}" ] && DESTINATION="${i#*=}" && \
+                    logger "Target folder set to $DESTINATION"
+                ;;
+            *.7z | *.tar | *.tar.* | *.zip | *.rar)
+                if xtract "$i"; then
+                    logger "Files extracted successfuly"
+                else
+                    logger "Errors occured"; fi
+                ;;
+        esac
+        shift
+    done
     echo "Log file - ${LOG_FILE}"
 }
 

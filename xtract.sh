@@ -9,7 +9,7 @@
 # extracting archives. It extracts the given file to the
 # current directoty.
 #
-# VERSION: 0.2
+# VERSION: 0.3
 #
 # - - - - - - - - CAUTION!!! - - - - - - - -
 #
@@ -26,7 +26,6 @@ ROOT_UID=0
 DESTINATION=""
 ARGS=("$@")
 #A_NAME=$(basename "$1" | sed -r '$s/\.(zip|rar|bz2|gz|tar.gz|tar.bz2)$//I' | sed -r '$s/ //g') # Strip archive extension
-###TODO"Usage: $(basename "$0" .sh)"
 
 trap 'logger "~~~~~~~~~~~~~~ xtract.sh stopped ~~~~~~~~~~~~~"' 1 0
 
@@ -38,7 +37,7 @@ spin () {   # Makeshift progress indicator
 #             SC2181: Check exit code directly with e.g. 'if mycmd;', not $!
     sp='/-\|'  # <`~~~ these are the actual spinner chars.
     n=${#sp}
-    echo -ne "\b\b"
+    echo -n "... "
     while [[ -d /proc/$pid ]]; do   # PID directory probing
         echo -ne "\b${sp:i++%n:1}"  # Print a character then delete it inplace
         sleep 0.08
@@ -48,25 +47,22 @@ spin () {   # Makeshift progress indicator
 #----------------------------------------------------------------------
 #  Pre-extraction checks
 #----------------------------------------------------------------------
-[[ $# -eq 0 ]] && echo "no args given"; exit 1
-[[ $UID -eq $ROOT_UID ]] && echo "This script shouldn't be run as root"; exit 1
->>>>>>> 34855f6a4f90a8b0015c008bceb20fa7efbd5e21
+[[ $# -eq 0 ]] && echo "no args given" && exit 1
+[[ $UID -eq $ROOT_UID ]] && echo "This script shouldn't be run as root" && exit 1
 
-<<<<<<< HEAD
 chk_archive () {
-    logger "Checking archive ${1} with 7z utility"
+    logger "Checking $1 with 7z"
     chk_p 7z
     logger "7z output:\n$(7z t "$*" | sed -n 5,18p)" > /dev/null 2>&1 & spin
-    #    || echo "error with archive integrity" && exit 1
+}
+
 chk_p() { # checks if nedded program is installed
   command -v "$1" >/dev/null 2>&1 || echo "$* not installed"
->>>>>>> 34855f6a4f90a8b0015c008bceb20fa7efbd5e21
-}
 }
 
 # This is just output redirection for the log file
 logger() {
-  echo -e "$@"                                                         #SC2u086; Prints regular output
+  echo -ne "$@"                                                         #SC2u086; Prints regular output
   echo -e "$(date +\|%T.\[%4N\]\|) $*" >/dev/null >>"${LOG_FILE}" 2>&1 # adds time and the regular output to the logfile
 }
 
@@ -76,32 +72,43 @@ logger() {
 x_zip () {
     chk_p unzip
     chk_archive "$1"
-    logger "Starting xtraction"
-    logger "...$(unzip -o -q "$1" -d "$DESTINATION")" \
-        > /dev/null 2>&1 & spin || logger "...$(unzip -o -q "$1")" > /dev/null 2>&1 & spin
+    logger "Xtracting $1 with unzip"
+    if [[ -z $DESTINATION ]]; then
+        logger "...$(unzip -o -q "$1")" > /dev/null 2>&1 & spin
+    else logger "...$(unzip -o -q "$1" -d "$DESTINATION")" \
+        > /dev/null 2>&1 & spin; fi
 }
 
 x_rar () {
     chk_p unrar
     check_archive "$1"
-    logger "Starting xtraction"
-    logger "$(unrar x -y -o+ -idpdc "$1" "$DESTINATION")" > /dev/null 2>&1 & spin
+    logger "Xtracting $1 with unrar"
+    if [[ -z $DESTINATION ]]; then
+        logger "$(unrar x -y -o+ -idpdc "$1")" > /dev/null 2>&1 & spin
+    else logger "$(unrar x -y -o+ -idpdc "$1" "$DESTINATION")" \
+        > /dev/null 2>&1 & spin; fi
 }
 
 x_tar () {
     chk_p tar
     chk_archive "$1"
-    logger "Starting xtraction with tar"
-    logger "...$(tar xaf "$1" -C "$DESTINATION")" \
-        > /dev/null 2>&1 & spin || logger "...$(tar xaf "$1")" > /dev/null 2>&1 & spin
+    logger "Xtracting $1 with tar"
+    if [[ -z $DESTINATION ]]; then
+        logger "...$(tar xaf "$1")" > /dev/null 2>&1 & spin
+    else logger "...$(tar xaf "$1" -C "$DESTINATION")" \
+        > /dev/null 2>&1 & spin; fi
 }
 
 x_7z () {
     chk_p 7z
     chk_archive "$1"
-    logger "$(7z x -bb0 -bd -aoa "$1" -o$DESTINATION | sed -n 5,20p)" \
-        > /dev/null 2>&1 & spin || logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" \
-        > /dev/null 2>&1 & spin
+    logger "Xtracting $1 with 7z"
+    if [[ -z $DESTINATION ]]; then
+        logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" \
+            > /dev/null 2>&1 & spin
+    else logger "$(7z x -bb0 -bd -aoa "$1" -o$DESTINATION | sed -n 5,20p)" \
+            > /dev/null 2>&1 & spin; fi
+}
 
 #----------------------------------------------------------------------
 # The actual running part of the script
@@ -125,24 +132,24 @@ xtract () {       # match files by extension
             ;;
 
         *)
-            echo "Unsupported file format"; exit 1
+            echo "Unsupported file format" && exit 1
             ;;
     esac
 }
 
 init () { # initialization - basic checks and main script invoker
     echo >> "${LOG_FILE}"
-    logger "~~~~~~~~~~~~~~ xtract.sh xecuted ~~~~~~~~~~~~~"
+    logger "~~~~~~~~~~~~~~ xtract.sh xecuted ~~~~~~~~~~~~~"; echo
     for i in "${ARGS[@]}"; do
         case "$i" in
             -t=* | --target=*)
                 shift
                 [ -d "${i#*=}" ] && DESTINATION="${i#*=}" && \
-                    logger "Target folder set to $DESTINATION"
+                    logger "Target folder set to $DESTINATION"; echo
                 ;;
             *.7z | *.tar | *.tar.* | *.zip | *.rar)
                 if xtract "$i"; then
-                    logger "Files extracted successfuly"
+                    logger "Files extracted successfuly" > /dev/null 2>&1
                 else
                     logger "Errors occured"; fi
                 ;;

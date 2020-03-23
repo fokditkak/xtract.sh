@@ -31,7 +31,7 @@ ROOT_UID=0
 DESTINATION=""
 ARGS=("$@")
 #A_NAME=$(basename "$1" | sed -r '$s/\.(zip|rar|bz2|gz|tar.gz|tar.bz2)$//I' | sed -r '$s/ //g') # Strip archive extension
-#TODO"Usage: $(basename "$0" .sh)"
+###TODO"Usage: $(basename "$0" .sh)"
 
 trap 'logger "~~~~~~~~~~~~~~ xtract.sh stopped ~~~~~~~~~~~~~"' 1 0
 
@@ -90,20 +90,23 @@ x_rar () {
     chk_p unrar
     check_archive "$1"
     logger "Starting xtraction"
-    logger "$(unrar x -y -o+ -idpdc "$1")" > /dev/null 2>&1 & spin
+    logger "$(unrar x -y -o+ -idpdc "$1" "$DESTINATION")" > /dev/null 2>&1 & spin
 }
 
 x_tar () {
     chk_p tar
     chk_archive "$1"
     logger "Starting xtraction with tar"
-    logger "...$(tar xaf "$1")" > /dev/null 2>&1 & spin
+    logger "...$(tar xaf "$1" -C "$DESTINATION")" \
+        > /dev/null 2>&1 & spin || logger "...$(tar xaf "$1")" > /dev/null 2>&1 & spin
 }
 
 x_7z () {
     chk_p 7z
     chk_archive "$1"
-    logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" > /dev/null 2>&1 & spin
+    logger "$(7z x -bb0 -bd -aoa "$1" -o$DESTINATION | sed -n 5,20p)" \
+        > /dev/null 2>&1 & spin || logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" \
+        > /dev/null 2>&1 & spin
 }
 
 #----------------------------------------------------------------------

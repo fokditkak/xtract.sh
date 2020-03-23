@@ -10,15 +10,10 @@
 # current directoty.
 #
 # VERSION: 0.2
-
-# This scripts is meant to be easy-to-use
-# Aimed at archives: extract zip, rar, tar, etc...
-# Currently all exit statuses are set to 0
-# Log file location is set to "$LOG_FILE"
-# All files extrated will have full paths
 #
 # - - - - - - - - CAUTION!!! - - - - - - - -
 #
+# This script is work-in-progress
 # All progs WILL overwrite any existing files!
 # Keep track of log file. Might become large
 # Consider removing it
@@ -34,7 +29,6 @@ ARGS=("$@")
 ###TODO"Usage: $(basename "$0" .sh)"
 
 trap 'logger "~~~~~~~~~~~~~~ xtract.sh stopped ~~~~~~~~~~~~~"' 1 0
-
 
 spin () {   # Makeshift progress indicator
             # It should be used after longer processess
@@ -56,28 +50,29 @@ spin () {   # Makeshift progress indicator
 #----------------------------------------------------------------------
 [[ $# -eq 0 ]] && echo "no args given"; exit 1
 [[ $UID -eq $ROOT_UID ]] && echo "This script shouldn't be run as root"; exit 1
+>>>>>>> 34855f6a4f90a8b0015c008bceb20fa7efbd5e21
 
-
-chk_p () { # checks if nedded program is installed
-    command -v "$*" > /dev/null 2>&1 || echo "$* not installed"
-}
-
+<<<<<<< HEAD
 chk_archive () {
     logger "Checking archive ${1} with 7z utility"
     chk_p 7z
     logger "7z output:\n$(7z t "$*" | sed -n 5,18p)" > /dev/null 2>&1 & spin
     #    || echo "error with archive integrity" && exit 1
+chk_p() { # checks if nedded program is installed
+  command -v "$1" >/dev/null 2>&1 || echo "$* not installed"
+>>>>>>> 34855f6a4f90a8b0015c008bceb20fa7efbd5e21
+}
 }
 
-logger () { # This is just output redirection for the log file
-    echo -e "$@" #SC2u086; Prints regular output
-    echo -e "$(date +\|%T.\[%4N\]\|) $*" > /dev/null >> "${LOG_FILE}" 2>&1 # adds time and the regular output to the logfile
+# This is just output redirection for the log file
+logger() {
+  echo -e "$@"                                                         #SC2u086; Prints regular output
+  echo -e "$(date +\|%T.\[%4N\]\|) $*" >/dev/null >>"${LOG_FILE}" 2>&1 # adds time and the regular output to the logfile
 }
 
 #----------------------------------------------------------------------
 #  External utility extraction commands
 #----------------------------------------------------------------------
-
 x_zip () {
     chk_p unzip
     chk_archive "$1"
@@ -107,12 +102,10 @@ x_7z () {
     logger "$(7z x -bb0 -bd -aoa "$1" -o$DESTINATION | sed -n 5,20p)" \
         > /dev/null 2>&1 & spin || logger "$(7z x -bb0 -bd -aoa "$1" | sed -n 5,20p)" \
         > /dev/null 2>&1 & spin
-}
 
 #----------------------------------------------------------------------
 # The actual running part of the script
 #----------------------------------------------------------------------
-
 xtract () {       # match files by extension
     case "$1" in
         *.zip)
